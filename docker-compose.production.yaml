@@ -93,6 +93,7 @@ services:
       - config/sidekiq.yml
     volumes:
       - rails-data:/app/storage
+    ports: []
     healthcheck:
       test: ["CMD-SHELL", "bundle exec rails runner 'puts Sidekiq.redis(&:info)' > /dev/null 2>&1"]
       interval: 30s
