@@ -38,7 +38,7 @@ services:
       SMTP_USERNAME: ${CHATWOOT_SMTP_USERNAME}
       SMTP_PASSWORD: ${CHATWOOT_SMTP_PASSWORD}
       ACTIVE_STORAGE_SERVICE: ${ACTIVE_STORAGE_SERVICE:-local}
-      SERVICE_USER_POSTGRES: postgres   # ← fix für die Warning
+      SERVICE_USER_POSTGRES: postgres   # ← Warning fix
     entrypoint: docker/entrypoints/rails.sh
     command: sh -c "bundle exec rails db:chatwoot_prepare && bundle exec rails s -p 3000 -b 0.0.0.0"
     volumes:
@@ -85,7 +85,7 @@ services:
       SMTP_USERNAME: ${CHATWOOT_SMTP_USERNAME}
       SMTP_PASSWORD: ${CHATWOOT_SMTP_PASSWORD}
       ACTIVE_STORAGE_SERVICE: ${ACTIVE_STORAGE_SERVICE:-local}
-      SERVICE_USER_POSTGRES: postgres   # ← fix für die Warning
+      SERVICE_USER_POSTGRES: postgres   # ← Warning fix
     command:
       - bundle
       - exec
@@ -94,7 +94,6 @@ services:
       - config/sidekiq.yml
     volumes:
       - rails-data:/app/storage
-    ports: []                    # Keine Domain für Sidekiq
     healthcheck:
       test: ["CMD-SHELL", "bundle exec rails runner 'puts Sidekiq.redis(&:info)' > /dev/null 2>&1"]
       interval: 30s
