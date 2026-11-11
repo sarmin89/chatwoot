@@ -120,7 +120,11 @@ ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 ENV BUNDLE_PATH="/gems"
 
-RUN apk update && apk add --no-cache \
+# Upgrade the base image packages (including zlib) before adding runtime deps.
+# apk add alone leaves packages that shipped in the Ruby image at their old versions.
+RUN apk update \
+  && apk upgrade --no-cache \
+  && apk add --no-cache \
   build-base \
   openssl \
   tzdata \
