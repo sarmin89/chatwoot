@@ -81,9 +81,12 @@ COPY . /app
 RUN mkdir -p /app/log
 
 # generate production assets if production environment
+# tests/playwright/package.json is named "playwright" at version 1.0.0. Scanners
+# report that file as CVE-2025-59288 (fixed in Playwright 1.55.1). The suite is
+# not installed or used in production, so drop it with the other test artifacts.
 RUN if [ "$RAILS_ENV" = "production" ]; then \
   SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile \
-  && rm -rf spec node_modules tmp/cache; \
+  && rm -rf spec node_modules tmp/cache tests; \
   fi
 
 # Generate .git_sha file with current commit hash
