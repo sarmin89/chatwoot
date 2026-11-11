@@ -1,11 +1,11 @@
 source 'https://rubygems.org'
 
-ruby '3.4.4'
+ruby '3.4.12'
 
 ##-- base gems for rails --##
 
 gem 'rack-cors', '2.0.0', require: 'rack/cors'
-gem 'rails', '7.2.3.1'
+gem 'rails', '7.2.3.2'
 
 # Reduces boot times through caching; required in config/boot.rb
 gem 'bootsnap', require: false
@@ -57,6 +57,8 @@ gem 'aws-sdk-sesv2', require: false
 gem 'azure-blob', require: false
 gem 'google-cloud-storage', '>= 1.48.0', require: false
 gem 'image_processing'
+# Active Storage 7.2.3.2 calls Vips.block_untrusted while booting (CVE-2026-66066).
+gem 'ruby-vips', '>= 2.2.1'
 
 ##-- for actionmailbox --##
 gem 'aws-actionmailbox-ses', '~> 0'
