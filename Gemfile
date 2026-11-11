@@ -130,7 +130,8 @@ gem 'datadog', '~> 2.0', require: false
 gem 'elastic-apm', require: false
 gem 'newrelic_rpm', require: false
 gem 'newrelic-sidekiq-metrics', '>= 1.6.2', require: false
-gem 'scout_apm', require: false
+# 5.7+ compiles the allocations extension on GCC 15 (Alpine 3.24). 6.0 changes sample-rate units.
+gem 'scout_apm', '~> 5.8.0', require: false
 gem 'sentry-rails', '>= 5.19.0', require: false
 gem 'sentry-ruby', require: false
 gem 'sentry-sidekiq', '>= 5.19.0', require: false
