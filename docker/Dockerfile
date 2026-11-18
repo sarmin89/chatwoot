@@ -1,6 +1,6 @@
 # pre-build stage
-FROM node:24.22.1-alpine as node
-FROM ruby:3.4.4-alpine3.21 AS pre-builder
+FROM node:24.22.1-alpine3.24 AS node
+FROM ruby:3.4.12-alpine3.24 AS pre-builder
 
 ARG NODE_VERSION="24.22.1"
 ARG PNPM_VERSION="10.2.0"
@@ -81,22 +81,41 @@ COPY . /app
 RUN mkdir -p /app/log
 
 # generate production assets if production environment
+# tests/playwright/package.json is named "playwright" at version 1.0.0. Scanners
+# report that file as CVE-2025-59288 (fixed in Playwright 1.55.1). The suite is
+# not installed or used in production, so drop it with the other test artifacts.
 RUN if [ "$RAILS_ENV" = "production" ]; then \
   SECRET_KEY_BASE=precompile_placeholder RAILS_LOG_TO_STDOUT=enabled bundle exec rake assets:precompile \
-  && rm -rf spec node_modules tmp/cache; \
+  && rm -rf spec node_modules tmp/cache tests; \
   fi
 
 # Generate .git_sha file with current commit hash
-RUN git rev-parse HEAD > /app/.git_sha
-
+RUN if [ -d .git ]; then git rev-parse HEAD > /app/.git_sha; else echo "unknown" > /app/.git_sha; fi
+RUN touch /app/.git_sha  # fallback, falls nichts da
 # Remove unnecessary files
 RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
   && find /gems/ruby/3.4.0/gems/ \( -name "*.c" -o -name "*.o" \) -delete \
   && rm -rf .git \
   && rm .gitignore
 
+# npm 11.19.1 (shipped with node:24.22.1) bundles undici 6.28.0 through node-gyp at
+# /usr/local/lib/node_modules/npm/node_modules/undici. Production never runs npm:
+# assets are precompiled above and EXECJS_RUNTIME is Disabled. Publish those
+# modules only for non-production images so the production layers do not contain
+# that undici copy (deleting it in a later layer would leave it in the history).
+FROM alpine:3.24 AS runtime-node-modules
+ARG RAILS_ENV=production
+COPY --from=node /usr/local/lib/node_modules /tmp/node_modules
+RUN mkdir -p /out/node_modules \
+  && if [ "$RAILS_ENV" != "production" ]; then \
+    rm -rf /out/node_modules \
+    && mv /tmp/node_modules /out/node_modules; \
+  else \
+    rm -rf /tmp/node_modules; \
+  fi
+
 # final build stage
-FROM ruby:3.4.4-alpine3.21
+FROM ruby:3.4.12-alpine3.24
 
 ARG NODE_VERSION="24.22.1"
 ARG PNPM_VERSION="10.2.0"
@@ -120,7 +139,11 @@ ARG RAILS_ENV=production
 ENV RAILS_ENV ${RAILS_ENV}
 ENV BUNDLE_PATH="/gems"
 
-RUN apk update && apk add --no-cache \
+# Upgrade the base image packages (including zlib) before adding runtime deps.
+# apk add alone leaves packages that shipped in the Ruby image at their old versions.
+RUN apk update \
+  && apk upgrade --no-cache \
+  && apk add --no-cache \
   build-base \
   openssl \
   tzdata \
@@ -134,7 +157,7 @@ RUN apk update && apk add --no-cache \
 ENV VIPS_BLOCK_UNTRUSTED=1
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/
-COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=runtime-node-modules /out/node_modules /usr/local/lib/node_modules
 
 RUN if [ "$RAILS_ENV" != "production" ]; then \
   apk add --no-cache curl \
